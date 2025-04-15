@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import io
 import requests
 from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+import boto3
 
 load_dotenv()
 
@@ -60,10 +61,29 @@ class EmbeddingGenerator:
     def process_image(self, image_id, image_urls):
         """Generate embedding for a single image"""
         try:
-            # Load image from medium size URL
-            url = json.loads(image_urls)['medium']
-            response = requests.get(url)
-            img = Image.open(io.BytesIO(response.content))
+            # Check if image_urls is already a dict or needs to be parsed
+            if isinstance(image_urls, str):
+                urls = json.loads(image_urls)
+            else:
+                urls = image_urls
+                
+            # Get S3 client with boto3
+            s3 = boto3.client('s3')
+            
+            # Parse the S3 URL to get bucket and key
+            url = urls['medium']
+            # Extract bucket name and object key from URL
+            # Format: https://BUCKET.s3.amazonaws.com/KEY
+            s3_parts = url.replace('https://', '').split('/')
+            bucket = s3_parts[0].split('.')[0]
+            key = '/'.join(s3_parts[1:])
+            
+            print(f"Trying to get image from bucket: {bucket}, key: {key}")
+            
+            # Download image directly from S3
+            response = s3.get_object(Bucket=bucket, Key=key)
+            img_data = response['Body'].read()
+            img = Image.open(io.BytesIO(img_data))
             
             # Convert to RGB if needed (for PNG with alpha channel)
             if img.mode != "RGB":

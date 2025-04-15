@@ -9,18 +9,53 @@ export default function Home() {
   // State to track if a prompt has been entered
   const [prompt, setPrompt] = useState("");
   const [showMoodboard, setShowMoodboard] = useState(false);
+  // Add loading state
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Sample data for mood board images
-  const moodboardImages = Array(16).fill('/placeholder-image.jpg');
-  // Sample color palette
-  const colorPalette = ['#A67C52', '#C99C67', '#E6B87A', '#D9BB82', '#A67C52', '#2A3541'];
-  // Sample suggested styles
-  const suggestedStyles = ['Cinematic', 'Painterly', 'Illustration'];
+  // State for moodboard data
+  const [moodboardImages, setMoodboardImages] = useState<any[]>([]);
+  const [colorPalette, setColorPalette] = useState(['#A67C52', '#C99C67', '#E6B87A', '#D9BB82', '#A67C52', '#2A3541']);
+  const [suggestedStyles, setSuggestedStyles] = useState(['Cinematic', 'Painterly', 'Illustration']);
 
   // Handle prompt submission
-  const handleSubmitPrompt = () => {
+  const handleSubmitPrompt = async () => {
     if (prompt.trim()) {
-      setShowMoodboard(true);
+      try {
+        setIsLoading(true);
+        
+        // Call the moodboard API
+        const response = await fetch('/api/moodboard', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: prompt.trim() }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update state with the returned data
+        setMoodboardImages(data.images || []);
+        
+        if (data.colorPalette && data.colorPalette.length > 0) {
+          setColorPalette(data.colorPalette);
+        }
+        
+        if (data.suggestedStyles && data.suggestedStyles.length > 0) {
+          setSuggestedStyles(data.suggestedStyles);
+        }
+        
+        setShowMoodboard(true);
+      } catch (error) {
+        console.error('Error generating moodboard:', error);
+        alert('Failed to generate moodboard. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -85,15 +120,24 @@ export default function Home() {
                 className="w-full p-4 pr-12 rounded-full border border-gray-300 bg-white text-gray-800 placeholder-gray-500"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSubmitPrompt()}
+                onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleSubmitPrompt()}
+                disabled={isLoading}
               />
               <button 
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-600 cursor-pointer"
+                className={`absolute right-4 top-1/2 -translate-y-1/2 text-blue-600 cursor-pointer ${isLoading ? 'opacity-50' : ''}`}
                 onClick={handleSubmitPrompt}
+                disabled={isLoading}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
+                {isLoading ? (
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                )}
               </button>
             </div>
           </div>
@@ -107,13 +151,15 @@ export default function Home() {
                 className="w-full p-4 pr-24 rounded-full border border-gray-300 bg-white text-gray-800 placeholder-gray-500"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSubmitPrompt()}
+                onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleSubmitPrompt()}
+                disabled={isLoading}
               />
               <div className="absolute right-4 flex gap-2">
                 <button 
                   className="text-gray-500 hover:text-gray-700 cursor-pointer"
                   onClick={handleClearPrompt}
                   title="Clear prompt"
+                  disabled={isLoading}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -121,12 +167,20 @@ export default function Home() {
                   </svg>
                 </button>
                 <button 
-                  className="text-blue-600 cursor-pointer"
+                  className={`text-blue-600 cursor-pointer ${isLoading ? 'opacity-50' : ''}`}
                   onClick={handleSubmitPrompt}
+                  disabled={isLoading}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
+                  {isLoading ? (
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
@@ -142,34 +196,41 @@ export default function Home() {
                 </button>
               </div>
               
-              <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-                {moodboardImages.map((src, index) => (
-                  <div 
-                    key={index} 
-                    className="aspect-square bg-gray-800 rounded-md overflow-hidden cursor-pointer relative group"
-                    onClick={() => alert('Image expand functionality here')}
-                  >
-                    <Image
-                      src={src}
-                      alt={`Mood image ${index + 1}`}
-                      width={100}
-                      height={100}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
-                      <svg 
-                        className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24" 
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                      </svg>
+              {moodboardImages.length > 0 ? (
+                <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+                  {moodboardImages.map((img, index) => (
+                    <div 
+                      key={img.id || index} 
+                      className="aspect-square bg-gray-800 rounded-md overflow-hidden cursor-pointer relative group"
+                      onClick={() => alert('Image expand functionality here')}
+                    >
+                      <Image
+                        src={img.urls.medium}
+                        alt={`Mood image ${index + 1}`}
+                        width={100}
+                        height={100}
+                        className="w-full h-full object-cover"
+                        unoptimized={true} // Add this to bypass image optimization if needed
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
+                        <svg 
+                          className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24" 
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex justify-center items-center h-40 bg-gray-100 rounded-md">
+                  <p className="text-gray-500">No images found. Try a different prompt.</p>
+                </div>
+              )}
             </div>
             
             {/* Sidebar content */}
@@ -214,18 +275,19 @@ export default function Home() {
               <div>
                 <h3 className="text-2xl font-medium mb-4 text-gray-900">Thumbnails</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {Array(3).fill('/placeholder-image.jpg').map((src, index) => (
+                  {moodboardImages.slice(0, 3).map((img, index) => (
                     <div 
-                      key={index} 
+                      key={img.id || `thumb-${index}`} 
                       className="aspect-square bg-gray-800 rounded-md overflow-hidden cursor-pointer relative group"
                       onClick={() => alert('Thumbnail expand functionality here')}
                     >
                       <Image
-                        src={src}
+                        src={img.urls.thumb || img.urls.small || img.urls.medium}
                         alt={`Thumbnail ${index + 1}`}
                         width={100}
                         height={100}
                         className="w-full h-full object-cover"
+                        unoptimized={true}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
                         <svg 

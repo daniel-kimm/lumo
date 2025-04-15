@@ -85,4 +85,9 @@ virtualenv/
 *.parquet
 *.sqlite
 *.db
+
+# Lambda layers
+/lambda-layer/
+clip-layer.zip
+*.zip
 EOF
